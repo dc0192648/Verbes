@@ -1,0 +1,1026 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Verbes">
+<meta name="theme-color" content="#7b3f72">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<title>Verbes — pratique du français</title>
+<style>
+  /* Palette: aubergine against cool neutrals — distinct from Verbos's cobalt
+     on the home screen. The accent is kept clear of red/amber/green because
+     those three carry answer verdicts — the accent must never be mistaken
+     for a judgement (which is why it isn't bordeaux). */
+  :root, :root[data-theme="light"] {
+    --bg: #f4f5f8;      --card: #ffffff;    --ink: #191c22;    --dim: #676d79;
+    --line: #dfe3ea;    --accent: #7b3f72;  --accent-soft: #f3e7f1; --on-accent: #ffffff;
+    --ok: #1f7a4d;      --ok-soft: #e0f1e7;
+    --bad: #b3261e;     --bad-soft: #fbe4e2;
+    --warn: #8a6100;    --warn-soft: #fbf0d8;
+    --radius: 14px;
+    --serif: "Iowan Old Style", Charter, Georgia, "Times New Roman", serif;
+    /* highlight tints, kept clear of the accent and of ok/bad/warn */
+    --hl-stem: #e7ddfb;  --hl-end: #cfeaef;  --hl-part: #f7e6c9;  --hl-spel: #e4e7ed;
+    /* mood badges: indicativo / subjuntivo / imperativo */
+    --mood-ind: #1f6f7a; --mood-subj: #6a45b0; --mood-imp: #4f5b6e;
+  }
+  /* dark tokens, defined once and applied by both signals */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161b;    --card: #1d2027;    --ink: #e8eaee;    --dim: #969ca8;
+      --line: #2e333d;  --accent: #e0a5d4;  --accent-soft: #2e1f2c; --on-accent: #241722;
+      --ok: #6fcf97;    --ok-soft: #16301f; --bad: #f2a09a;    --bad-soft: #351d1b;
+      --warn: #e5c163;  --warn-soft: #302713;
+      --hl-stem: #3d2f5c; --hl-end: #143c43; --hl-part: #43351a; --hl-spel: #2b303a;
+      --mood-ind: #7fcad4; --mood-subj: #b9a2ec; --mood-imp: #aab4c4;
+    }
+  }
+  /* the viewer's explicit toggle must win over the OS preference, both ways */
+  :root[data-theme="dark"] {
+    --bg: #14161b;      --card: #1d2027;    --ink: #e8eaee;    --dim: #969ca8;
+    --line: #2e333d;    --accent: #e0a5d4;  --accent-soft: #2e1f2c; --on-accent: #241722;
+    --ok: #6fcf97;      --ok-soft: #16301f; --bad: #f2a09a;    --bad-soft: #351d1b;
+    --warn: #e5c163;    --warn-soft: #302713;
+    --hl-stem: #3d2f5c; --hl-end: #143c43; --hl-part: #43351a; --hl-spel: #2b303a;
+    --mood-ind: #7fcad4; --mood-subj: #b9a2ec; --mood-imp: #aab4c4;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom));
+    overscroll-behavior-y: contain;
+  }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 0 16px; }
+  header {
+    padding: calc(12px + env(safe-area-inset-top)) 16px 10px;
+    display: flex; align-items: baseline; gap: 10px;
+    max-width: 620px; margin: 0 auto;
+  }
+  header h1 { font-size: 19px; margin: 0; letter-spacing: -0.01em; }
+  header .streak { margin-left: auto; font-size: 13px; color: var(--dim); }
+
+  /* ---- tab bar ---- */
+  nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    background: color-mix(in srgb, var(--card) 92%, transparent);
+    backdrop-filter: saturate(180%) blur(14px);
+    border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom);
+    display: flex;
+  }
+  nav button {
+    flex: 1; border: 0; background: none; color: var(--dim);
+    font: inherit; font-size: 12px; padding: 9px 4px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer;
+  }
+  nav button .g { font-size: 19px; line-height: 1; }
+  nav button[aria-selected="true"] { color: var(--accent); font-weight: 600; }
+
+  section[hidden] { display: none; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 14px;
+  }
+  h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em;
+       color: var(--dim); margin: 22px 0 10px; font-weight: 600; }
+  h2:first-child { margin-top: 6px; }
+  .warn-card {
+    background: var(--warn-soft); border-color: var(--warn); color: var(--ink);
+    margin-top: 12px; font-size: 14px; line-height: 1.5;
+  }
+  .warn-card b { color: var(--warn); }
+
+  /* ---- session ---- */
+  .progress { height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; margin-bottom: 14px; }
+  .progress i { display: block; height: 100%; background: var(--accent); transition: width .25s ease; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chip {
+    font-size: 12px; padding: 3px 9px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); font-weight: 600;
+  }
+  .chip.plain { background: var(--line); color: var(--dim); font-weight: 500; }
+  /* Tense badge: outlined, not filled, so it can't be mistaken for the filled
+     verb chip or the irregularity highlights. The mood sets the color and the
+     glyph (● ◆ ▲), so the mood still reads without color. */
+  .chip.mood {
+    background: transparent; border: 1px solid currentColor; white-space: nowrap;
+    text-transform: none; letter-spacing: normal; font-weight: 600;
+  }
+  .mood-ind  { color: var(--mood-ind); }
+  .mood-subj { color: var(--mood-subj); }
+  .mood-imp  { color: var(--mood-imp); }
+  h2 .chip.mood { margin-left: 8px; vertical-align: 1px; }
+  /* French — the language being studied — is set in serif so it reads as
+     content, visibly distinct from the interface wrapped around it. */
+  .sentence { font-family: var(--serif); font-size: 21px; line-height: 1.5; margin: 4px 0 8px; }
+  .sentence .blank {
+    display: inline-block; min-width: 76px; border-bottom: 2px dashed var(--accent);
+    color: var(--accent); text-align: center; font-weight: 600;
+  }
+  .prompt-src {
+    font-family: var(--serif); font-size: 20px; padding: 11px 13px;
+    background: var(--accent-soft); border-radius: 10px; margin-bottom: 10px;
+  }
+
+  input[type=text] {
+    width: 100%; font-family: var(--serif); font-size: 19px; padding: 12px 13px;
+    border: 1.5px solid var(--line); border-radius: 11px;
+    background: var(--bg); color: var(--ink);
+  }
+  input[type=text]:focus { outline: none; border-color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  .accents { display: flex; flex-wrap: wrap; gap: 6px; margin: 9px 0 12px; }
+  .accents button {
+    font: inherit; font-size: 17px; min-width: 40px; padding: 7px 0;
+    border: 1px solid var(--line); border-radius: 9px;
+    background: var(--card); color: var(--ink); cursor: pointer;
+  }
+  .accents button:active { background: var(--accent-soft); }
+  .btn {
+    width: 100%; font: inherit; font-weight: 600; font-size: 17px; padding: 13px;
+    border: 0; border-radius: 11px; background: var(--accent); color: var(--on-accent); cursor: pointer;
+  }
+  .btn.sec { background: var(--line); color: var(--ink); }
+  .btn + .btn { margin-top: 8px; }
+
+  .fb { border-radius: 11px; padding: 12px 13px; margin-bottom: 12px; font-size: 15px; }
+  .fb.ok   { background: var(--ok-soft);   color: var(--ok); }
+  .fb.bad  { background: var(--bad-soft);  color: var(--bad); }
+  .fb.warn { background: var(--warn-soft); color: var(--warn); }
+  .fb b { font-family: var(--serif); font-size: 18px; }
+  .fb .note { display: block; margin-top: 7px; color: var(--ink); opacity: .78; font-size: 14px; }
+
+  /* ---- verb browser ---- */
+  .search { width: 100%; font: inherit; padding: 11px 13px; border-radius: 11px;
+            border: 1.5px solid var(--line); background: var(--card); color: var(--ink); margin-bottom: 12px; }
+  .vlist { display: grid; gap: 8px; }
+  .vrow {
+    display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    background: var(--card); border: 1px solid var(--line); border-radius: 11px;
+    padding: 11px 13px; font: inherit; color: inherit; cursor: pointer;
+  }
+  .vrow .inf { font-family: var(--serif); font-size: 17px; font-weight: 600; }
+  .vrow .bar { margin-left: auto; width: 54px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .vrow .bar i { display: block; height: 100%; background: var(--ok); }
+  .tag { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: var(--line); color: var(--dim); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  table td { padding: 7px 4px; border-bottom: 1px solid var(--line); }
+  table td.p { color: var(--dim); font-size: 13px; width: 38%; }
+  table td.f { font-family: var(--serif); font-size: 16px; cursor: pointer; }
+  .m0 { color: var(--dim); } .m1, .m2 { color: var(--bad); }
+  .m3 { color: var(--warn); } .m4, .m5 { color: var(--ok); }
+  .scroller { overflow-x: auto; }
+
+  /* Mastery is a dot; irregularity is a highlight. Two different things about
+     a form, so two different encodings — they must not fight for the same ink. */
+  .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+         margin-right: 8px; vertical-align: middle; background: currentColor; }
+  mark.k {
+    background: none; color: inherit; border-radius: 3px;
+    padding: 1px 2.5px; margin: 0 -0.5px;
+    -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  }
+  mark.k-stem { background: var(--hl-stem); }
+  mark.k-end  { background: var(--hl-end); }
+  mark.k-part { background: var(--hl-part); }
+  mark.k-spel { background: var(--hl-spel); border-bottom: 1.5px dotted var(--dim); }
+  .reg {
+    display: block; margin-top: 3px; font-size: 12px; color: var(--dim);
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  }
+  .reg s { text-decoration-color: var(--dim); opacity: .85; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .legend span { font-size: 11.5px; padding: 3px 9px; border-radius: 999px; color: var(--ink); }
+  .badge {
+    float: right; font-size: 11px; font-weight: 600; letter-spacing: 0;
+    text-transform: none; color: var(--dim); font-variant-numeric: tabular-nums;
+  }
+  .tally { display: flex; gap: 14px; margin-top: 10px; font-variant-numeric: tabular-nums; }
+  .tally div { font-size: 12px; color: var(--dim); }
+  .tally b { display: block; font-size: 21px; color: var(--ink); font-weight: 700; }
+
+  /* practice-mastery bar — shown at the verb level and per active tense;
+     kept separate from .vrow .bar (the verb-list bar) so tweaking one
+     can't accidentally change the other. */
+  .mastery { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .mastery .bar { width: 90px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; flex-shrink: 0; }
+  .mastery .bar i { display: block; height: 100%; background: var(--ok); }
+  .mastery .pct { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 13px; min-width: 32px; }
+
+  label.row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  label.row:last-child { border-bottom: 0; }
+  label.row .lab { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+  label.row .cnt { font-size: 12px; color: var(--dim); }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); }
+  textarea { width: 100%; height: 110px; font: 12px/1.4 ui-monospace, Menlo, monospace;
+             border: 1.5px solid var(--line); border-radius: 10px; padding: 10px;
+             background: var(--bg); color: var(--ink); }
+  .muted { color: var(--dim); font-size: 13.5px; }
+  .stat { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); }
+  .stat:last-child { border-bottom: 0; }
+  .big { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+  .center { text-align: center; }
+  #splash {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg); padding: 0 32px; text-align: center;
+    transition: opacity 0.25s ease;
+  }
+  #splash .splash-line {
+    font: 22px/1.6 var(--serif); color: var(--ink); margin: 0;
+    opacity: 0; transition: opacity 0.7s ease;
+  }
+  #splash .splash-line.show { opacity: 1; }
+  #splash[hidden] { display: none; }
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div>
+    <p class="splash-line">Sans bruit.</p>
+    <p class="splash-line">Sans hiboux.</p>
+    <p class="splash-line">Que des verbes.</p>
+  </div>
+</div>
+
+<header>
+  <h1>Verbes</h1>
+  <span class="streak" id="streak"></span>
+</header>
+
+<div id="storage-warn" class="wrap" hidden>
+  <div class="card warn-card">
+    <b>⚠ Ta progression n'est pas enregistrée sur cet appareil.</b>
+    <p style="margin:6px 0 0">
+      Cette page ne peut pas enregistrer de données ici — cela peut arriver dans
+      le lien Claude, par exemple. À chaque fermeture de l'appli, tu repartiras
+      de zéro.
+    </p>
+    <p style="margin:6px 0 0">
+      Avant de fermer, copie ta progression dans <b>Réglages → Sauvegarde</b> pour
+      ne pas la perdre. Pour un enregistrement permanent, utilise la version
+      publiée plutôt que ce lien.
+    </p>
+  </div>
+</div>
+
+<div class="wrap">
+  <section id="s-exercices"></section>
+  <section id="s-verbes" hidden></section>
+  <section id="s-reglages" hidden></section>
+</div>
+
+<nav>
+  <button data-tab="exercices"    aria-selected="true"><span class="g">◉</span>Exercices</button>
+  <button data-tab="verbes"  aria-selected="false"><span class="g">☰</span>Verbes</button>
+  <button data-tab="reglages" aria-selected="false"><span class="g">⚙</span>Réglages</button>
+</nav>
+
+<script src="engine.js"></script>
+<script src="data.js"></script>
+<script src="frequency.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  var KEY = 'verbes.v1';
+  var BOXES = [0, 1, 3, 7, 21];          // days until next review, by box 1..5
+  // only the letters French verb forms actually use, plus the apostrophe
+  var ACCENT_KEYS = ['é','è','ê','â','î','û','ç','\''];
+
+  /* ---------- state ---------- */
+
+  function defaults() {
+    var tenses = {};
+    CONJ.TENSE_KEYS.forEach(function (t) { tenses[t] = (t === 'pres' || t === 'passeCompose'); });
+    return {
+      v: 1,
+      settings: { daily: 15, tenses: tenses },
+      srs: {}, streak: { last: null, count: 0 }, history: []
+    };
+  }
+
+  /* Some hosting contexts (notably a sandboxed iframe without same-origin
+     access) make localStorage throw on every call. save() used to swallow
+     that silently, which is exactly what "my progress isn't saving" looks
+     like from the outside — no error, just nothing sticking. This probe
+     turns that into a visible warning instead of a silent one. */
+  function storageWorks() {
+    try {
+      if (typeof localStorage === 'undefined' || localStorage === null) return false;
+      var probe = '__verbes_probe__', val = 'x' + Date.now();
+      localStorage.setItem(probe, val);
+      var back = localStorage.getItem(probe);
+      localStorage.removeItem(probe);
+      return back === val;
+    } catch (e) { return false; }
+  }
+  var STORAGE_OK = storageWorks();
+
+  var state = load();
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return defaults();
+      var s = JSON.parse(raw), d = defaults();
+      s.settings = Object.assign(d.settings, s.settings || {});
+      s.settings.tenses = Object.assign(d.settings.tenses, s.settings.tenses || {});
+      s.srs = s.srs || {}; s.streak = s.streak || d.streak; s.history = s.history || [];
+      return s;
+    } catch (e) { return defaults(); }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  /* ---------- dates ---------- */
+
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function addDays(iso, n) {
+    var p = iso.split('-'), d = new Date(+p[0], +p[1] - 1, +p[2]);
+    d.setDate(d.getDate() + n);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  function daysSince(iso) {
+    var a = iso.split('-'), b = today().split('-');
+    var d1 = new Date(+a[0], +a[1] - 1, +a[2]);
+    var d2 = new Date(+b[0], +b[1] - 1, +b[2]);
+    return Math.round((d2 - d1) / 86400000);
+  }
+
+  /* ---------- item pool ---------- */
+
+  function activeTenses() {
+    return CONJ.TENSE_KEYS.filter(function (t) { return state.settings.tenses[t]; });
+  }
+
+  function drillPersons() {
+    return CONJ.DRILL_PERSONS.slice();
+  }
+
+  function poolItems() {
+    var items = [], tenses = activeTenses(), persons = drillPersons();
+    CONJ.list().forEach(function (v) {
+      tenses.forEach(function (t) {
+        persons.forEach(function (p) {
+          if (CONJ.conjugate(v, t, p) === null) return;
+          items.push({ kind: 'fill', id: 'f|' + v + '|' + t + '|' + p, verb: v, tense: t, person: p });
+        });
+      });
+    });
+    return items;
+  }
+
+  // primary form first, then agreement and spelling variants (allée, paye)
+  function answersFor(it) {
+    return CONJ.variants(it.verb, it.tense, it.person);
+  }
+
+  /* ---------- session ---------- */
+
+  var session = null;
+
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  /* Orders never-seen cards so common verbs tend to be introduced before rare
+     ones, without a rare-but-active tense getting buried by a common one.
+     Two steps: within each tense, a weighted-random shuffle biased by corpus
+     frequency (log2 dampened, so "ser" in presente isn't ~6600x more likely
+     than a form with zero corpus hits -- more like 8-13x); then the tenses
+     are interleaved round-robin, in a freshly shuffled tense order each call,
+     so every active tense gets a fair, even share of new cards regardless of
+     how rare it is in the corpus. Person isn't in the frequency data, so it
+     rides along on whatever weight its verb+tense got. */
+  function freqWeight(verb, tense) {
+    return Math.log2(FREQ.count(verb, tense) + 2);
+  }
+
+  function weightedFreshOrder(fresh) {
+    var byTense = {};
+    fresh.forEach(function (it) {
+      (byTense[it.tense] = byTense[it.tense] || []).push(it);
+    });
+    Object.keys(byTense).forEach(function (t) {
+      byTense[t].forEach(function (it) {
+        it._key = Math.pow(Math.random(), 1 / freqWeight(it.verb, t));
+      });
+      byTense[t].sort(function (a, b) { return b._key - a._key; });
+    });
+    var tenseKeys = shuffle(Object.keys(byTense));
+    var idx = {};
+    tenseKeys.forEach(function (t) { idx[t] = 0; });
+    var merged = [], remaining = fresh.length;
+    while (remaining > 0) {
+      tenseKeys.forEach(function (t) {
+        var arr = byTense[t];
+        if (idx[t] < arr.length) { merged.push(arr[idx[t]]); idx[t]++; remaining--; }
+      });
+    }
+    return merged;
+  }
+
+  function pick(list, n) {
+    var t = today(), due = [], fresh = [];
+    list.forEach(function (it) {
+      var s = state.srs[it.id];
+      if (!s) fresh.push(it); else if (s.due <= t) due.push(it);
+    });
+    shuffle(due);
+    fresh = weightedFreshOrder(fresh);
+    return due.concat(fresh).slice(0, n);
+  }
+
+  function buildSession() {
+    var queue = pick(poolItems(), state.settings.daily);
+    session = { queue: queue, total: queue.length, done: 0, correct: 0 };
+  }
+
+  function grade(it, verdict) {
+    var s = state.srs[it.id] || { box: 1, due: today(), seen: 0, right: 0, wrong: 0 };
+    s.seen++;
+    if (verdict === 'correct') {
+      s.right++;
+      s.box = Math.min(s.box + 1, 5);
+      s.due = addDays(today(), BOXES[s.box - 1]);
+    } else if (verdict === 'accent') {
+      s.due = addDays(today(), 1);          // box deliberately unchanged
+    } else {
+      s.wrong++; s.box = 1; s.due = today();
+    }
+    s.last = today();
+    state.srs[it.id] = s;
+    save();
+  }
+
+  /* "Nouveau" for a card never answered before; "N jours" — days since it was
+     last answered — for one that has. Records saved before `last` existed
+     show no badge rather than a guess, until they're graded once more. */
+  function freshnessBadge(it) {
+    var s = state.srs[it.id];
+    if (!s) return 'Nouveau';
+    if (!s.last) return null;
+    var n = daysSince(s.last);
+    if (n <= 0) return "Aujourd'hui";
+    return n === 1 ? '1 jour' : n + ' jours';
+  }
+
+  function bumpStreak() {
+    var t = today();
+    if (state.streak.last === t) return;
+    state.streak.count = (state.streak.last === addDays(t, -1)) ? state.streak.count + 1 : 1;
+    state.streak.last = t;
+    state.history.push({ date: t, done: session.total, correct: session.correct });
+    if (state.history.length > 400) state.history = state.history.slice(-400);
+    save();
+  }
+
+  /* ---------- rendering helpers ---------- */
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+  function personLabel(t, p) {
+    return CONJ.TENSES[t].mood === 'imp' ? CONJ.IMP_LABEL[p] : CONJ.PERSON_LABEL[p];
+  }
+
+  /* ---------- EXERCICES ---------- */
+
+  var pending = null;    // {item, verdict} awaiting "continue"
+
+  var MOOD_GLYPH = { ind: '●', subj: '◆', imp: '▲' };
+
+  // One badge per tense: mood as color + glyph, time + name as text.
+  function tenseBadge(t) {
+    var d = CONJ.TENSES[t];
+    return '<span class="chip mood mood-' + d.mood + '">' +
+           MOOD_GLYPH[d.mood] + ' ' + esc(d.badge) + '</span>';
+  }
+
+  function renderExercices() {
+    var el = $('s-exercices');
+    if (!session) buildSession();
+
+    if (!session.queue.length) return renderDone(el);
+
+    var it = session.queue[0];
+    var pct = session.total ? Math.round(session.done / session.total * 100) : 0;
+    var h = '<div class="progress"><i style="width:' + pct + '%"></i></div>';
+
+    var fr = VERB_DATA.frameFor(it.verb, it.tense, it.person);
+    var freshness = freshnessBadge(it);
+    var chips = '<span class="chip" id="chip-verb" style="cursor:pointer">' + esc(it.verb) + '</span>' +
+            tenseBadge(it.tense) +
+            '<span class="chip plain">' + esc(personLabel(it.tense, it.person)) + '</span>' +
+            (freshness ? '<span class="chip plain">' + esc(freshness) + '</span>' : '');
+    h += '<div class="card">' +
+           '<div class="meta">' + chips + '</div>' +
+           '<div class="sentence">' + esc(fr.before) +
+             '<span class="blank">&nbsp;?&nbsp;</span>' + esc(fr.after) + '</div>' +
+           '<div id="fb"></div>' +
+           '<input type="text" id="ans" autocapitalize="off" autocorrect="off" ' +
+              'spellcheck="false" autocomplete="off" placeholder="Écris le verbe…">' +
+           accentBar() +
+           '<button class="btn" id="go">Vérifier</button>' +
+         '</div>';
+
+    h += '<p class="muted center" id="count">' + session.done + ' sur ' + session.total + '</p>';
+    el.innerHTML = h;
+    wireQuestion(it);
+  }
+
+  function accentBar() {
+    return '<div class="accents">' + ACCENT_KEYS.map(function (c) {
+      return '<button type="button" data-ch="' + c + '">' + c + '</button>';
+    }).join('') + '</div>';
+  }
+
+  function wireQuestion(it) {
+    var input = $('ans'), goBtn = $('go');
+    Array.prototype.forEach.call(document.querySelectorAll('.accents button'), function (b) {
+      b.addEventListener('click', function () {
+        var ch = b.getAttribute('data-ch');
+        var s = input.selectionStart || input.value.length, e = input.selectionEnd || s;
+        input.value = input.value.slice(0, s) + ch + input.value.slice(e);
+        input.focus();
+        input.setSelectionRange(s + 1, s + 1);
+      });
+    });
+    input.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); goBtn.click(); }
+    });
+    goBtn.addEventListener('click', function () {
+      if (pending) return advance();
+      submit(it, input.value);
+    });
+    if (it.verb && $('chip-verb')) {
+      $('chip-verb').addEventListener('click', function () {
+        openVerb = it.verb;
+        go('verbes');
+      });
+    }
+    setTimeout(function () { input.focus(); }, 60);
+  }
+
+  function submit(it, value) {
+    if (!value.trim()) return;
+    var accepted = answersFor(it);
+    var verdict = VERB_DATA.check(value, accepted);
+    grade(it, verdict);
+    pending = { item: it, verdict: verdict };
+
+    // echo the accepted form the learner actually aimed at (levée, not levé)
+    var fb = $('fb'), canonical = accepted.filter(function (a) {
+      return verdict === 'correct'
+        ? VERB_DATA.normalize(a) === VERB_DATA.normalize(value)
+        : VERB_DATA.stripAccents(a) === VERB_DATA.stripAccents(value);
+    })[0] || accepted[0];
+    var note = VERB_DATA.VERB_NOTES[it.verb] || VERB_DATA.TENSE_NOTES[it.tense] || '';
+
+    if (verdict === 'correct') {
+      session.done++; session.correct++;
+      // show the OTHER legal renderings — never the answer already displayed,
+      // and never the user's own wording back at them
+      var alt = accepted.filter(function (a) {
+        var n = VERB_DATA.normalize(a);
+        return n !== VERB_DATA.normalize(value) && n !== VERB_DATA.normalize(canonical);
+      }).slice(0, 2);
+      fb.className = 'fb ok';
+      fb.innerHTML = '✓ <b>' + esc(canonical) + '</b>' +
+        (alt.length ? '<span class="note">Accepté aussi : ' + esc(alt.join(' · ')) + '</span>' : '');
+    } else if (verdict === 'accent') {
+      session.done++;
+      fb.className = 'fb warn';
+      fb.innerHTML = '≈ Presque — vérifie les accents : <b>' + esc(canonical) + '</b>' +
+        '<span class="note">Ça revient bientôt : les accents comptent.</span>';
+    } else {
+      fb.className = 'fb bad';
+      fb.innerHTML = '✗ <b>' + esc(canonical) + '</b>' +
+        (note ? '<span class="note">' + esc(note) + '</span>' : '');
+      // a miss repeats later in this same session — every time, until it's
+      // answered right or accent — without moving the done/total count
+      session.queue.push(it);
+    }
+    $('count').textContent = session.done + ' sur ' + session.total;
+    $('ans').disabled = true;
+    $('go').textContent = session.queue.length > 1 ? 'Suivant' : 'Terminer';
+    $('go').focus();
+  }
+
+  function advance() {
+    pending = null;
+    session.queue.shift();
+    renderExercices();
+  }
+
+  function renderDone(el) {
+    bumpStreak();
+    var pctv = session.total ? Math.round(session.correct / session.total * 100) : 0;
+    el.innerHTML =
+      '<div class="card center">' +
+        '<p class="muted" style="margin:4px 0 2px">Séance terminée</p>' +
+        '<div class="big">' + pctv + '%</div>' +
+        '<p class="muted">' + session.correct + ' sur ' + session.total + ' du premier coup</p>' +
+      '</div>' +
+      '<button class="btn" id="again">Encore une séance</button>' +
+      '<button class="btn sec" id="toverbs" style="margin-top:8px">Voir les verbes</button>';
+    $('again').addEventListener('click', function () { session = null; renderExercices(); });
+    $('toverbs').addEventListener('click', function () { go('verbes'); });
+  }
+
+  /* ---------- VERBES ---------- */
+
+  var openVerb = null, filter = '';
+
+  function masteryOf(verb) {
+    var tot = 0, sum = 0;
+    Object.keys(state.srs).forEach(function (k) {
+      var parts = k.split('|');
+      if (parts[1] !== verb) return;
+      tot++; sum += state.srs[k].box;
+    });
+    return tot ? sum / (tot * 5) : 0;
+  }
+
+  /* Same idea as masteryOf, but scoped to a specific set of tenses and
+     reporting seen/total counts alongside the percentage — powers the
+     mastery bars on the verb detail page (verb-level and per-tense). Only
+     tenses active in Réglages ever count toward `total`, so a tense you
+     haven't turned on contributes nothing to either number. */
+  function formStats(verb, tenses) {
+    var persons = drillPersons();
+    var total = 0, seen = 0, sum = 0;
+    tenses.forEach(function (t) {
+      persons.forEach(function (p) {
+        if (CONJ.conjugate(verb, t, p) === null) return;
+        total++;
+        var s = state.srs['f|' + verb + '|' + t + '|' + p];
+        if (s) { seen++; sum += s.box; }
+      });
+    });
+    return { seen: seen, total: total, pct: seen ? Math.round(sum / (seen * 5) * 100) : 0 };
+  }
+  function verbStats(verb)     { return formStats(verb, activeTenses()); }
+  function tenseStats(verb, t) { return formStats(verb, [t]); }
+
+  function masteryBar(st) {
+    if (!st.total) return '';
+    return '<div class="mastery"><span class="bar"><i style="width:' + st.pct + '%"></i></span>' +
+           '<span class="pct">' + st.pct + '%</span>' +
+           '<span class="muted">' + st.seen + ' sur ' + st.total + ' formes pratiquées</span></div>';
+  }
+
+  /* How irregular a verb is — one shared classification, used both for the
+     tag shown on each row and for sorting the list most-regular to
+     most-irregular. `cat` is the rank, in that order: 0 is fully regular,
+     5 is the most irregular band.
+     Spelling changes don't make a verb irregular — they're a rule you apply,
+     not an exception to memorise — so they sit near the regular end and are
+     kept out of the fraction that drives the presque/irrégulier/très bands. */
+  function verbRank(verb) {
+    var pr = CONJ.profile(verb);
+    if (!pr.total) return { cat: 0, label: '', bg: '', irregular: 0, spelling: 0 };
+    var cat, label, bg;
+    if (pr.irregular === 0 && pr.spelling === 0) {
+      if (pr.participleIrregular) { cat = 1; label = 'participe seul';     bg = 'var(--hl-part)'; }
+      else                        { cat = 0; label = 'régulier';          bg = 'var(--line)'; }
+    } else if (pr.irregular === 0) {
+      cat = 2; label = 'orthographe seule'; bg = 'var(--hl-spel)';
+    } else {
+      var pct = pr.irregular / pr.total;
+      if (pct < 0.26)      { cat = 3; label = 'presque régulier';  bg = 'var(--hl-spel)'; }
+      else if (pct < 0.61) { cat = 4; label = 'irrégulier';        bg = 'var(--hl-end)'; }
+      else                 { cat = 5; label = 'très irrégulier';   bg = 'var(--hl-stem)'; }
+    }
+    return { cat: cat, label: label, bg: bg, irregular: pr.irregular, spelling: pr.spelling };
+  }
+
+  function irregTag(verb) {
+    var r = verbRank(verb);
+    if (!r.label) return '';
+    return '<span class="tag" style="background:' + r.bg + ';color:var(--ink)">' + r.label + '</span>';
+  }
+
+  function renderVerbes() {
+    var el = $('s-verbes');
+    if (openVerb) return renderVerbDetail(el, openVerb);
+
+    // accent-blind, so "etre" finds être
+    var q = VERB_DATA.stripAccents(filter);
+    var rows = CONJ.list().filter(function (v) { return !q || VERB_DATA.stripAccents(v).indexOf(q) >= 0; });
+    // most regular to most irregular: the shared category first, then the
+    // finer irregular/spelling counts within it, alphabetical as last resort
+    rows.sort(function (a, b) {
+      var ra = verbRank(a), rb = verbRank(b);
+      return ra.cat - rb.cat || ra.irregular - rb.irregular ||
+             ra.spelling - rb.spelling || a.localeCompare(b);
+    });
+
+    el.innerHTML =
+      '<input class="search" id="q" type="search" placeholder="Chercher un verbe…" value="' + esc(filter) + '">' +
+      '<div class="vlist">' + rows.map(function (v) {
+        var info = CONJ.info(v), m = Math.round(masteryOf(v) * 100);
+        return '<button class="vrow" data-v="' + esc(v) + '">' +
+                 '<span class="inf">' + esc(v) + '</span>' +
+                 (info.reflexive ? '<span class="tag">pronominal</span>' : '') +
+                 irregTag(v) +
+                 '<span class="bar"><i style="width:' + m + '%"></i></span>' +
+               '</button>';
+      }).join('') + '</div>';
+
+    var q$ = $('q');
+    q$.addEventListener('input', function () {
+      filter = q$.value; var pos = q$.selectionStart;
+      renderVerbes();
+      var n = $('q'); n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {}
+    });
+    Array.prototype.forEach.call(el.querySelectorAll('.vrow'), function (b) {
+      b.addEventListener('click', function () { openVerb = b.getAttribute('data-v'); renderVerbes(); });
+    });
+  }
+
+  var KIND_CLASS = { stem: 'k-stem', ending: 'k-end', participle: 'k-part',
+                     spelling: 'k-spel', total: 'k-stem' };
+  var KIND_NAME = { stem: 'radical', ending: 'terminaison', participle: 'participe',
+                    spelling: 'orthographe', total: 'totalement irrégulier' };
+
+  var KIND_ORDER = ['stem', 'ending', 'participle', 'spelling'];
+
+  function kindsUsed(verb) {
+    var seen = {};
+    CONJ.TENSE_KEYS.forEach(function (t) {
+      CONJ.DRILL_PERSONS.forEach(function (p) {
+        var a = CONJ.irregularity(verb, t, p);
+        if (a && a.kind !== 'regular') seen[a.kind === 'total' ? 'stem' : a.kind] = true;
+      });
+    });
+    return KIND_ORDER.filter(function (k) { return seen[k]; });
+  }
+
+  /* Render a form with the characters that deviate from the regular pattern
+     marked, so what is irregular about it is visible rather than asserted. */
+  function markedForm(a) {
+    if (!a) return '';
+    if (a.kind === 'regular') return esc(a.form);
+    return esc(a.pre) + '<mark class="k ' + KIND_CLASS[a.kind] + '">' + esc(a.mid) +
+           '</mark>' + esc(a.post);
+  }
+
+  function renderVerbDetail(el, verb) {
+    var persons = drillPersons();
+    var showReg = state.settings.showRegular !== false;
+
+    var pr = CONJ.profile(verb);
+    var h = '<button class="btn sec" id="back">← Tous les verbes</button>' +
+            '<div class="card" style="margin-top:12px">' +
+              '<div class="sentence" style="margin:0">' + esc(verb) + '</div>' +
+              (VERB_DATA.VERB_NOTES[verb]
+                ? '<p class="muted" style="margin:10px 0 0">' + esc(VERB_DATA.VERB_NOTES[verb]) + '</p>' : '') +
+              '<div class="tally">' +
+                '<div><b>' + pr.irregular + '</b>irrégulières</div>' +
+                (pr.spelling ? '<div><b>' + pr.spelling + '</b>d\'orthographe</div>' : '') +
+                '<div><b>' + pr.regular + '</b>régulières</div>' +
+              '</div>' +
+              masteryBar(verbStats(verb)) +
+              // only the kinds this verb actually uses — an empty category is noise
+              '<div class="legend">' + kindsUsed(verb).map(function (k) {
+                return '<span style="background:var(--hl-' +
+                       { stem: 'stem', ending: 'end', participle: 'part', spelling: 'spel' }[k] +
+                       ')">' + esc(KIND_NAME[k]) + '</span>';
+              }).join('') + '</div>' +
+              '<button class="btn sec" id="togreg" style="margin-top:12px">' +
+                (showReg ? 'Masquer la forme régulière' : 'Afficher la forme régulière') +
+              '</button>' +
+            '</div>';
+
+    // simple tenses first, compound (perfect) tenses grouped after them
+    var tenseOrder = CONJ.TENSE_KEYS.filter(function (t) { return !CONJ.TENSES[t].compound; })
+      .concat(CONJ.TENSE_KEYS.filter(function (t) { return CONJ.TENSES[t].compound; }));
+    var active = activeTenses();
+
+    tenseOrder.forEach(function (t) {
+      var any = persons.some(function (p) { return CONJ.conjugate(verb, t, p) !== null; });
+      if (!any) return;
+
+      // Build rows first — when the toggle is off, a fully regular row is
+      // dropped entirely, not just stripped of its comparison note. If
+      // nothing in the tense deviates, the whole section is skipped below,
+      // rather than showing an empty card under its heading.
+      var rows = '';
+      persons.forEach(function (p) {
+        var f = CONJ.conjugate(verb, t, p);
+        if (f === null) return;
+        var a = CONJ.irregularity(verb, t, p);
+        if (!showReg && a.kind === 'regular') return;
+
+        var s = state.srs['f|' + verb + '|' + t + '|' + p];
+        var body = markedForm(a);
+        if (showReg && a.kind !== 'regular') {
+          // The mark shows WHICH letters differ; the name says WHAT KIND of
+          // deviation it is. They are not the same thing — peux differs in
+          // the root letters too, but it is the -x ending that is irregular.
+          body += '<span class="reg">' + (a.regular
+            ? 'régulier : <s>' + esc(a.regular) + '</s> · ' + esc(KIND_NAME[a.kind])
+            : esc(KIND_NAME[a.kind])) + '</span>';
+        }
+        rows += '<tr><td class="p">' + esc(personLabel(t, p)) + '</td>' +
+             '<td class="f" data-drill="' + esc(t + '|' + p) + '">' +
+             '<span class="dot m' + (s ? s.box : 0) + '"></span>' + body + '</td></tr>';
+      });
+      if (!rows) return;
+
+      var tc = CONJ.irregularCount(verb, t);
+      var off = tc.irregular + tc.spelling;
+      var tBar = active.indexOf(t) >= 0 ? masteryBar(tenseStats(verb, t)) : '';
+      h += '<h2>' + esc(CONJ.TENSES[t].label) + tenseBadge(t) +
+           '<span class="badge">' + (off ? off + ' sur ' + tc.total : 'régulier') + '</span>' +
+           '</h2><div class="card">' + tBar + '<table>' + rows + '</table></div>';
+    });
+
+    el.innerHTML = h;
+    $('back').addEventListener('click', function () { openVerb = null; renderVerbes(); });
+    if ($('togreg')) {
+      $('togreg').addEventListener('click', function () {
+        state.settings.showRegular = !showReg; save(); renderVerbes();
+      });
+    }
+    Array.prototype.forEach.call(el.querySelectorAll('[data-drill]'), function (td) {
+      td.addEventListener('click', function () {
+        var p = td.getAttribute('data-drill').split('|');
+        if (!session) buildSession();
+        session.queue.unshift({ kind: 'fill', id: 'f|' + verb + '|' + p[0] + '|' + p[1],
+                                verb: verb, tense: p[0], person: p[1] });
+        session.total++;
+        pending = null;
+        openVerb = null;
+        go('exercices');
+      });
+    });
+  }
+
+  /* ---------- RÉGLAGES ---------- */
+
+  function countFor(t) {
+    var n = 0;
+    CONJ.list().forEach(function (v) {
+      drillPersons().forEach(function (p) { if (CONJ.conjugate(v, t, p) !== null) n++; });
+    });
+    return n;
+  }
+
+  function accuracy() {
+    var r = 0, w = 0;
+    Object.keys(state.srs).forEach(function (k) { r += state.srs[k].right; w += state.srs[k].wrong; });
+    return (r + w) ? Math.round(r / (r + w) * 100) : null;
+  }
+
+  function renderReglages() {
+    var el = $('s-reglages');
+    var active = activeTenses(), pool = 0;
+    active.forEach(function (t) { pool += countFor(t); });
+    var seen = Object.keys(state.srs).length;
+    var acc = accuracy();
+
+    var h = '<h2>Séance du jour</h2><div class="card">' +
+      '<label class="row" style="border:0"><span class="lab">Questions par jour</span>' +
+      '<b id="dv">' + state.settings.daily + '</b></label>' +
+      '<input type="range" id="daily" min="10" max="20" step="1" value="' + state.settings.daily + '">' +
+      '</div>';
+
+    h += '<h2>Temps <span class="muted">— ' + pool + ' formes actives</span></h2><div class="card">';
+    CONJ.TENSE_KEYS.forEach(function (t) {
+      h += '<label class="row"><input type="checkbox" data-tense="' + t + '"' +
+           (state.settings.tenses[t] ? ' checked' : '') + '>' +
+           '<span class="lab">' + esc(CONJ.TENSES[t].label) + tenseBadge(t) +
+           (CONJ.TENSES[t].literary ? '<span class="tag">littéraire</span>' : '') + '</span>' +
+           '<span class="cnt">' + countFor(t) + '</span></label>';
+    });
+    h += '</div><p class="muted">Désactiver un temps fige sa progression sans l\'effacer : ' +
+         'en le réactivant, tu reprends là où tu t\'étais arrêté. Les temps littéraires ' +
+         'ne s\'emploient qu\'à l\'écrit soutenu.</p>';
+
+    h += '<h2>Progression</h2><div class="card">' +
+      '<div class="stat"><span>Série</span><b>' + state.streak.count + ' jour(s)</b></div>' +
+      '<div class="stat"><span>Formes vues</span><b>' + seen + '</b></div>' +
+      '<div class="stat"><span>Réussite</span><b>' + (acc === null ? '—' : acc + ' %') + '</b></div>' +
+      '<div class="stat"><span>Séances</span><b>' + state.history.length + '</b></div>' +
+      '</div>';
+
+    h += '<h2>Sauvegarde</h2><div class="card">' +
+      '<p class="muted" style="margin-top:0">Copie ce texte pour emporter ta progression ailleurs ' +
+      '(le navigateur ne la partage pas entre sites).</p>' +
+      '<textarea id="dump" readonly>' + esc(JSON.stringify(state)) + '</textarea>' +
+      '<button class="btn sec" id="copy" style="margin-top:8px">Copier</button>' +
+      '<button class="btn sec" id="imp" style="margin-top:8px">Importer…</button>' +
+      '<button class="btn sec" id="reset" style="margin-top:8px">Tout effacer</button></div>';
+
+    el.innerHTML = h;
+
+    $('daily').addEventListener('input', function () {
+      state.settings.daily = +this.value; $('dv').textContent = this.value; save(); session = null;
+    });
+    Array.prototype.forEach.call(el.querySelectorAll('[data-tense]'), function (c) {
+      c.addEventListener('change', function () {
+        state.settings.tenses[c.getAttribute('data-tense')] = c.checked;
+        save(); session = null; renderReglages();
+      });
+    });
+    $('copy').addEventListener('click', function () {
+      var d = $('dump'); d.select(); d.setSelectionRange(0, 999999);
+      try { document.execCommand('copy'); this.textContent = 'Copié ✓'; } catch (e) {}
+    });
+    $('imp').addEventListener('click', function () {
+      var raw = prompt('Colle ici la sauvegarde :');
+      if (!raw) return;
+      try {
+        var parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object' || !parsed.srs) throw new Error('bad');
+        localStorage.setItem(KEY, JSON.stringify(parsed));
+        state = load(); session = null; renderReglages();
+        alert('Progression importée.');
+      } catch (e) { alert('Impossible de lire cette sauvegarde.'); }
+    });
+    $('reset').addEventListener('click', function () {
+      if (!confirm('Effacer toute la progression ? Impossible d\'annuler.')) return;
+      localStorage.removeItem(KEY); state = defaults(); session = null; renderReglages(); paintStreak();
+    });
+  }
+
+  /* ---------- routing ---------- */
+
+  function paintStreak() {
+    $('streak').textContent = state.streak.count > 0 ? '🔥 ' + state.streak.count : '';
+  }
+
+  function go(tab) {
+    ['exercices', 'verbes', 'reglages'].forEach(function (t) {
+      $('s-' + t).hidden = (t !== tab);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) {
+      b.setAttribute('aria-selected', b.getAttribute('data-tab') === tab ? 'true' : 'false');
+    });
+    if (tab === 'exercices') renderExercices();
+    if (tab === 'verbes') renderVerbes();
+    if (tab === 'reglages') renderReglages();
+    window.scrollTo(0, 0);
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) {
+    b.addEventListener('click', function () { go(b.getAttribute('data-tab')); });
+  });
+
+  /* splash: reveal each line in turn, then dismiss on tap or on its own */
+  (function () {
+    var splash = $('splash');
+    var lines = splash.querySelectorAll('.splash-line');
+    var STAGGER = 1400;  // ms between each line appearing
+    var HOLD = 1800;     // ms to linger after the last line, before auto-dismiss
+    var dismissed = false;
+    function dismiss() {
+      if (dismissed) return;
+      dismissed = true;
+      splash.style.opacity = '0';
+      setTimeout(function () { splash.hidden = true; }, 250);
+    }
+    Array.prototype.forEach.call(lines, function (line, i) {
+      setTimeout(function () { line.classList.add('show'); }, 300 + i * STAGGER);
+    });
+    splash.addEventListener('click', dismiss);
+    setTimeout(dismiss, 300 + lines.length * STAGGER + HOLD);
+  })();
+
+  paintStreak();
+  go('exercices');
+  if (!STORAGE_OK) $('storage-warn').hidden = false;
+
+  /* offline support, when served over http(s) */
+  if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>

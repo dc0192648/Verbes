@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verbes — engine tests</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font: 15px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    margin: 0; padding: 24px; max-width: 900px;
+    background: Canvas; color: CanvasText;
+  }
+  h1 { font-size: 18px; margin: 0 0 16px; }
+  #summary { padding: 14px 16px; border-radius: 10px; font-weight: 600; margin-bottom: 18px; }
+  .pass { background: #d8f3dc; color: #14532d; }
+  .fail { background: #ffe0e0; color: #7f1d1d; }
+  @media (prefers-color-scheme: dark) {
+    .pass { background: #14532d; color: #d8f3dc; }
+    .fail { background: #7f1d1d; color: #ffe0e0; }
+  }
+  pre { white-space: pre-wrap; margin: 0 0 10px; padding: 10px 12px;
+        border-left: 3px solid #dc2626; background: color-mix(in srgb, Canvas 92%, CanvasText); }
+</style>
+</head>
+<body>
+  <h1>Verbes — conjugation engine tests</h1>
+  <div id="summary">running…</div>
+  <div id="detail"></div>
+
+  <script src="../app/engine.js"></script>
+  <script src="../app/data.js"></script>
+  <script src="tests.js"></script>
+  <script>
+    var r = TESTS.run();
+    var s = document.getElementById('summary');
+    if (r.failures.length === 0) {
+      s.className = 'pass';
+      s.textContent = '✓ all ' + r.count + ' assertions passed';
+    } else {
+      s.className = 'fail';
+      s.textContent = '✗ ' + r.failures.length + ' of ' + r.count + ' assertions failed';
+      document.getElementById('detail').innerHTML =
+        r.failures.map(function (f) {
+          return '<pre>' + f.replace(/[&<>]/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c];
+          }) + '</pre>';
+        }).join('');
+    }
+  </script>
+</body>
+</html>
