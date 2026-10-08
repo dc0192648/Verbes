@@ -11,7 +11,7 @@ independent project: no shared code.
 
 ## Getting it on your iPhone
 
-Open the published address in **Safari** (Chrome on iOS cannot add to the Home
+Open **https://verbes.daniel-canough.workers.dev** in **Safari** (Chrome on iOS cannot add to the Home
 Screen), tap **Share** → **Add to Home Screen** → **Add**. It launches fullscreen
 with its own icon and works with no signal.
 
@@ -62,7 +62,7 @@ than deleting it.
 | `tests/tests.html` / `tests/tests.js` | ~1600 assertions. Open `tests.html` to run them |
 | `app/sw.js`, `app/manifest.json`, `app/icons/` | What makes it installable and offline |
 | `scripts/build.py` | Inlines the scripts into `dist/index.html` (single-file build) |
-| `scripts/mirror.py` | Regenerates `publish/` from `app/` — what gets deployed |
+| `scripts/mirror.py` | Regenerates `publish/` from `app/` — what gets deployed (`npx wrangler deploy`) |
 | `scripts/count_freq.py` | Downloads the UD French treebanks and regenerates `app/frequency.js` |
 | `scripts/make_icons.py` | Regenerates the icons (stdlib only, no Pillow) |
 | `scripts/serve.py` | Local dev server: `python3 scripts/serve.py` → localhost:8766 |
